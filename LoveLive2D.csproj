@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
     <PackageReference Include="Spectre.Console" Version="0.47.0" />
   </ItemGroup>
 
