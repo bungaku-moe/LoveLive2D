@@ -1,13 +1,39 @@
 using System.Security.Cryptography;
 using System.Text;
-using Spectre.Console;
 using ICSharpCode.SharpZipLib.Zip;
+using Spectre.Console;
 
 namespace Kiraio.LoveL2D
 {
     public static class Utils
     {
         const string LAST_OPEN_FILE = "last_open.txt";
+
+        internal static string NormalizePath(string path)
+        {
+            string[] pathSegments = path.Split(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar
+            );
+            List<string> normalizedSegments = new();
+
+            foreach (string segment in pathSegments)
+            {
+                if (segment == "..")
+                {
+                    if (normalizedSegments.Count > 0)
+                    {
+                        normalizedSegments.RemoveAt(normalizedSegments.Count - 1);
+                    }
+                }
+                else if (segment != "." && !string.IsNullOrEmpty(segment))
+                {
+                    normalizedSegments.Add(segment);
+                }
+            }
+
+            return string.Join(Path.DirectorySeparatorChar.ToString(), normalizedSegments);
+        }
 
         /// <summary>
         /// Get SHA-256 hash of a file.
@@ -34,12 +60,14 @@ namespace Kiraio.LoveL2D
             return string.Empty;
         }
 
-        internal static void ReplaceStringInFile(
+        internal static string ReplaceStringInFile(
             string filePath,
             string oldString,
-            string newString
+            string newString,
+            string? outputFile = null
         )
         {
+            outputFile ??= filePath;
             StringBuilder stringBuilder = new();
 
             using (StreamReader reader = new(filePath))
@@ -54,8 +82,239 @@ namespace Kiraio.LoveL2D
             }
 
             // Write the modified content back to the file
-            using StreamWriter writer = new(filePath);
+            using StreamWriter writer = new(outputFile);
             writer.Write(stringBuilder.ToString());
+
+            return outputFile;
+        }
+
+        /// <summary>
+        /// Copy data from a file to an other, replacing search term, ignoring case.
+        /// </summary>
+        /// <param name="originalFile"></param>
+        /// <param name="outputFile"></param>
+        /// <param name="searchTerm"></param>
+        /// <param name="replaceTerm"></param>
+        internal static string ReplaceStringInBinaryFile(
+            string originalFile,
+            string outputFile,
+            string searchTerm,
+            string replaceTerm
+        )
+        {
+            byte b;
+            //UpperCase bytes to search
+            byte[] searchBytes = Encoding.UTF8.GetBytes(searchTerm.ToUpper());
+            //LowerCase bytes to search
+            byte[] searchBytesLower = Encoding.UTF8.GetBytes(searchTerm.ToLower());
+            //Temporary bytes during found loop
+            byte[] bytesToAdd = new byte[searchBytes.Length];
+            //Search length
+            int searchBytesLength = searchBytes.Length;
+            //First Upper char
+            byte searchByte0 = searchBytes[0];
+            //First Lower char
+            byte searchByte0Lower = searchBytesLower[0];
+            //Replace with bytes
+            byte[] replaceBytes = Encoding.UTF8.GetBytes(replaceTerm);
+            int counter = 0;
+
+            using (FileStream inputStream = File.OpenRead(originalFile))
+            {
+                //input length
+                long srcLength = inputStream.Length;
+                using BinaryReader inputReader = new(inputStream);
+                using FileStream outputStream = File.OpenWrite(outputFile);
+                using BinaryWriter outputWriter = new(outputStream);
+                for (int nSrc = 0; nSrc < srcLength; ++nSrc)
+                    //first byte
+                    if ((b = inputReader.ReadByte()) == searchByte0 || b == searchByte0Lower)
+                    {
+                        bytesToAdd[0] = b;
+                        int nSearch = 1;
+
+                        //next bytes
+                        for (; nSearch < searchBytesLength; ++nSearch)
+                        {
+                            //get byte, save it and test
+                            if (
+                                (b = bytesToAdd[nSearch] = inputReader.ReadByte())
+                                    != searchBytes[nSearch]
+                                && b != searchBytesLower[nSearch]
+                            )
+                            {
+                                break; //fail
+                            }
+                        }
+
+                        //Avoid overflow. No need, in my case, because no chance to see searchTerm at the end.
+                        //else if (nSrc + nSearch >= srcLength)
+                        //    break;
+
+                        if (nSearch == searchBytesLength)
+                        {
+                            //success
+                            ++counter;
+                            outputWriter.Write(replaceBytes);
+                            nSrc += nSearch - 1;
+                        }
+                        else
+                        {
+                            //failed, add saved bytes
+                            outputWriter.Write(bytesToAdd, 0, nSearch + 1);
+                            nSrc += nSearch;
+                        }
+                    }
+                    else
+                        outputWriter.Write(b);
+            }
+
+            AnsiConsole.MarkupLineInterpolated(
+                $"Replaced string in {originalFile}: [green]{counter}[/]"
+            );
+            return outputFile;
+        }
+
+        internal static string ExtractZipEntry(
+            string zipFilePath,
+            string entryName,
+            string? outputFilePath = null
+        )
+        {
+            outputFilePath ??= Path.Combine(
+                Path.GetDirectoryName(zipFilePath) ?? string.Empty,
+                entryName
+            );
+
+            try
+            {
+                using ZipFile zipFile = new(zipFilePath);
+                // Log all entry names in the ZIP file for debugging purposes
+                // Console.WriteLine("Entries in ZIP file:");
+                // foreach (ZipEntry e in zipFile)
+                // {
+                //     Console.WriteLine(e.Name);
+                // }
+
+                entryName = ZipEntry.CleanName(entryName); // Normalize entry name path
+                ZipEntry entry = zipFile.GetEntry(entryName);
+
+                if (entry != null)
+                {
+                    // Ensure the output directory exists
+                    string outputDirectory = Path.GetDirectoryName(outputFilePath) ?? string.Empty;
+                    if (!string.IsNullOrEmpty(outputDirectory))
+                        Directory.CreateDirectory(outputDirectory);
+
+                    using Stream zipStream = zipFile.GetInputStream(entry);
+                    using FileStream outputFileStream = File.Create(outputFilePath);
+                    zipStream.CopyTo(outputFileStream);
+
+                    AnsiConsole.MarkupLineInterpolated(
+                        $"Entry [green]{entryName}[/] extracted as [green]{outputFilePath}[/]."
+                    );
+                }
+                else
+                    AnsiConsole.MarkupLineInterpolated(
+                        $"Entry [green]{entryName}[] not found in the ZIP file."
+                    );
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteException(ex);
+            }
+
+            return outputFilePath;
+        }
+
+        internal static string ModifyZipContents(
+            string inputFile,
+            string outputFile,
+            List<(string entryName, byte[] entryData)> modifiedFiles,
+            List<string>? ignoredFiles = null
+        )
+        {
+            try
+            {
+                AnsiConsole.MarkupLineInterpolated($"Modifying {inputFile}...");
+
+                // Read the input ZIP file into memory
+                byte[] zipBytes = File.ReadAllBytes(inputFile);
+
+                using (MemoryStream zipStream = new(zipBytes))
+                {
+                    // Unpack the ZIP file into memory
+                    using ZipFile inputZipFile = new(zipStream);
+                    // Create a new in-memory stream to store the modified ZIP file
+                    using MemoryStream modifiedZipStream = new();
+                    // Create a ZipOutputStream to write the modified contents
+                    using (ZipOutputStream zipOutputStream = new(modifiedZipStream))
+                    {
+                        foreach (ZipEntry entry in inputZipFile)
+                        {
+                            // Check if the entry should be modified and is not in the ignored list
+                            (string? entryName, byte[] entryData) = modifiedFiles.FirstOrDefault(
+                                f => ZipEntry.CleanName(f.entryName) == entry.Name
+                            );
+                            bool ignored =
+                                ignoredFiles?.Any(file => ZipEntry.CleanName(file) == entry.Name)
+                                ?? false;
+
+                            if (!ignored)
+                            {
+                                if (entryName != null)
+                                {
+                                    AnsiConsole.MarkupLineInterpolated(
+                                        $"Modifying Entry: [green]{entryName}[/]..."
+                                    );
+                                    // Modify the entry content
+                                    byte[] modifiedContentBytes = entryData;
+                                    ZipEntry modifiedEntry = new(entry.Name);
+                                    zipOutputStream.PutNextEntry(modifiedEntry);
+                                    zipOutputStream.Write(
+                                        modifiedContentBytes,
+                                        0,
+                                        modifiedContentBytes.Length
+                                    );
+                                    zipOutputStream.CloseEntry();
+                                }
+                                else
+                                {
+                                    // Copy unchanged entries to the modified ZIP
+                                    using Stream entryStream = inputZipFile.GetInputStream(entry);
+                                    // Create a new entry and copy the content
+                                    ZipEntry newEntry = new(entry.Name);
+                                    zipOutputStream.PutNextEntry(newEntry);
+
+                                    byte[] buffer = new byte[4096];
+                                    int bytesRead;
+                                    while (
+                                        (bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0
+                                    )
+                                    {
+                                        zipOutputStream.Write(buffer, 0, bytesRead);
+                                    }
+
+                                    zipOutputStream.CloseEntry();
+                                }
+                            }
+                            else
+                                AnsiConsole.MarkupLineInterpolated($"Skipping {entryName}");
+                        }
+                    }
+
+                    // Save the modified ZIP file to disk
+                    File.WriteAllBytes(outputFile, modifiedZipStream.ToArray());
+                }
+
+                AnsiConsole.MarkupLineInterpolated($"[green]{inputFile}[/] file modified and saved as {outputFile} successfully.");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteException(ex);
+            }
+
+            return outputFile;
         }
 
         internal static string UnZip(string filePath, string? outputFolder = null)
@@ -143,7 +402,7 @@ namespace Kiraio.LoveL2D
             return Directory.GetFiles(sourceFolder, "*.*", SearchOption.AllDirectories);
         }
 
-        internal static void SaveLastOpenedDirectory(string directoryPath)
+        internal static void SaveLastOpenedFile(string directoryPath)
         {
             try
             {
@@ -157,7 +416,7 @@ namespace Kiraio.LoveL2D
             }
         }
 
-        internal static string GetLastOpenedDirectory()
+        internal static string GetLastOpenedFile()
         {
             if (!File.Exists(LAST_OPEN_FILE))
                 return string.Empty;

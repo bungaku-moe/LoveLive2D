@@ -1,9 +1,4 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
+﻿using System.Reflection;
 using NativeFileDialogSharp;
 using Spectre.Console;
 
@@ -13,11 +8,11 @@ namespace Kiraio.LoveL2D
     {
         const string VERSION = "1.0.0";
         const string LIVE2D_CUBISM_MAIN = "Live2D_Cubism.jar";
-        const string LIVE2D_CUBISM_PACKAGE = "com/live2d/cubism";
-        const string CEAppDef_CLASS = "g.class";
-        static string APP_LIB_PATH = "app/lib";
+        static readonly string LIVE2D_CUBISM_PACKAGE = Utils.NormalizePath("com/live2d/cubism");
+        static string CEAppDef_CLASS = "g.class"; // Will be combined with LIVE2D_CUBISM_PACKAGE later
+        static string APP_LIB_PATH = Utils.NormalizePath("app/lib");
         const string MOD_LIB_PATH = "lib";
-        readonly static string[] RLMS = { "rlm1221.jar", "rlm1501.jar" };
+        readonly static string RLM = "rlm1501.jar";
 
         static void Main(string[] args)
         {
@@ -25,7 +20,7 @@ namespace Kiraio.LoveL2D
             PrintHelp();
 
             ChooseAction:
-            string[] actionList = { "Patch Pro License", "Revoke License", "Cancel" };
+            string[] actionList = { "Patch Pro License", "Revoke License", "Exit" };
             string actionPrompt = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("What would you like to do?")
@@ -41,7 +36,10 @@ namespace Kiraio.LoveL2D
             {
                 case 0:
                 case 1:
-                    filePicker = Dialog.FileOpen("exe", Utils.GetLastOpenedDirectory() ?? execDirectory);
+                    filePicker = Dialog.FileOpen(
+                        "exe",
+                        Path.GetDirectoryName(Utils.GetLastOpenedFile()) ?? execDirectory
+                    );
 
                     if (filePicker.IsCancelled)
                         goto ChooseAction;
@@ -60,12 +58,19 @@ namespace Kiraio.LoveL2D
             live2dDirectory = Path.GetDirectoryName(filePicker.Path);
             APP_LIB_PATH = Path.Combine(live2dDirectory ?? string.Empty, APP_LIB_PATH);
 
-            Utils.SaveLastOpenedDirectory(live2dDirectory ?? string.Empty);
+            if (!Directory.Exists(APP_LIB_PATH))
+            {
+                AnsiConsole.MarkupLine("No Live2D Cubism data found!");
+                return;
+            }
 
-            string rlmPath = Path.Combine(APP_LIB_PATH, RLMS[1]);
+            // Save last opened file
+            Utils.SaveLastOpenedFile(filePicker.Path ?? string.Empty);
+
+            string rlmPath = Path.Combine(APP_LIB_PATH, RLM);
             string oldRlmHash = Utils.GetSHA256(rlmPath);
             string rlmBackup = $"{rlmPath}.bak";
-            string modRlm = Path.Combine(execDirectory ?? string.Empty, MOD_LIB_PATH, RLMS[1]);
+            string modRlm = Path.Combine(execDirectory ?? string.Empty, MOD_LIB_PATH, RLM);
 
             switch (choiceIndex)
             {
@@ -78,36 +83,69 @@ namespace Kiraio.LoveL2D
             Patch:
             // v5.0.0^
             File.Move(rlmPath, rlmBackup, true); // Backup original rlm
-            File.Copy(modRlm, rlmPath, true);
+            File.Copy(modRlm, rlmPath, true); // Copy MOD rlm to installation path
 
             string newRlmHash = Utils.GetSHA256(rlmPath);
             string live2dMain = Path.Combine(APP_LIB_PATH, LIVE2D_CUBISM_MAIN);
+            CEAppDef_CLASS = Path.Combine(LIVE2D_CUBISM_PACKAGE, CEAppDef_CLASS);
 
             AnsiConsole.MarkupLineInterpolated($"Patching [green]{live2dMain}[/]...");
 
             /*
-            * Extracting .jar file in non case-sensitive file system causing problem
-            * because they didn't treat (e.g. "G.class" and "g.class") files as different file.
+            * Extracting .jar file in a non case-sensitive file system causing problem
+            * like they didn't treat (e.g. "G.class" and "g.class") files as different file,
+            * so they overwrite each other.
+            * To tackle this, we need to handle this in memory.
             */
-            string live2dMainUnpacked = Utils.UnZip(live2dMain); // unpacked...
-            // Utils.ReplaceStringInFile(Path.Combine(live2dMainUnpacked, LIVE2D_CUBISM_PACKAGE, CEAppDef_CLASS),  oldRlmHash, newRlmHash); // then patch "g.class"
+            // Extract "g.class" then modify the SHA-256 hash.
+            string modGClass = Utils.ExtractZipEntry(live2dMain, CEAppDef_CLASS);
+            modGClass = Utils.ReplaceStringInBinaryFile(
+                modGClass,
+                $"{modGClass}.mod",
+                oldRlmHash,
+                newRlmHash
+            );
 
-            File.Copy(live2dMain, $"{live2dMain}.bak", true);
-            // Utils.Zip(live2dMainUnpacked, live2dMain);
-            // Directory.Delete(live2dMainUnpacked, true);
+            // Store modified contents into a list
+            List<(string, byte[])> modifiedFiles =
+                new() { (CEAppDef_CLASS, File.ReadAllBytes(modGClass)) };
+            // Ignore these files to bypass jar signing
+            List<string> ignoredFiles =
+                new()
+                {
+                    Utils.NormalizePath("META-INF/MANIFEST.MF"),
+                    Utils.NormalizePath("META-INF/TE-D8685.RSA"),
+                    Utils.NormalizePath("META-INF/TE-D8685.SF")
+                };
+
+            File.Copy(live2dMain, $"{live2dMain}.bak", true); // Backup Live2D_Cubism.jar
+
+            Utils.ModifyZipContents(live2dMain, live2dMain, modifiedFiles, ignoredFiles);
+
+            // Cleanup temporary files
+            Directory.Delete(
+                Path.Combine(APP_LIB_PATH, CEAppDef_CLASS.Split(Path.DirectorySeparatorChar)[0]),
+                true
+            );
 
             AnsiConsole.MarkupLine("Done.");
             goto ChooseAction;
 
             Revoke:
             goto ChooseAction;
-
-            // Console.ReadLine();
         }
 
         static void PrintHelp()
         {
             AnsiConsole.MarkupLineInterpolated($"[bold red]Love Live2D v{VERSION}[/]");
+            Console.WriteLine();
+            AnsiConsole.MarkupLine(
+                "Unlock the full power of [link=https://www.live2d.com/en/]Live2D Cubism[/] for free!"
+            );
+            Console.WriteLine();
+            AnsiConsole.MarkupLine(
+                "For more information, visit: [link]https://github.com/kiraio-moe/LoveLive2D[/]"
+            );
         }
     }
 }
