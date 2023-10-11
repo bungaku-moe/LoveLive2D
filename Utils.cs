@@ -307,7 +307,9 @@ namespace Kiraio.LoveL2D
                     File.WriteAllBytes(outputFile, modifiedZipStream.ToArray());
                 }
 
-                AnsiConsole.MarkupLineInterpolated($"[green]{inputFile}[/] file modified and saved as [green]{outputFile}[/] successfully.");
+                AnsiConsole.MarkupLineInterpolated(
+                    $"[green]{inputFile}[/] file modified and saved as [green]{outputFile}[/] successfully."
+                );
             }
             catch (Exception ex)
             {

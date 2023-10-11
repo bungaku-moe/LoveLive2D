@@ -20,7 +20,7 @@ namespace Kiraio.LoveL2D
             PrintHelp();
 
             ChooseAction:
-            string[] actionList = { "Patch Pro License", "Revoke Pro License", "Exit" };
+            string[] actionList = { "Patch Pro License", "Revoke License", "Exit" };
             string actionPrompt = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("What would you like to do?")
@@ -84,52 +84,79 @@ namespace Kiraio.LoveL2D
             }
 
             Patch:
-            // v5.0.0^
-            File.Move(rlmPath, rlmBackup, true); // Backup original rlm
-            File.Copy(modRlm, rlmPath, true); // Copy MOD rlm to installation path
-            string newRlmHash = Utils.GetSHA256(rlmPath);
+            try
+            {
+                // v5.0.0^
+                File.Copy(live2dMain, live2dMainBackup, true); // Backup Live2D_Cubism.jar
+                File.Move(rlmPath, rlmBackup, true); // Backup original rlm
+                File.Copy(modRlm, rlmPath, true); // Copy MOD rlm to installation path
+                string newRlmHash = Utils.GetSHA256(rlmPath);
 
-            AnsiConsole.MarkupLineInterpolated($"Patching [green]{live2dMain}[/]...");
+                AnsiConsole.MarkupLineInterpolated($"Patching [green]{live2dMain}[/]...");
 
-            /*
-            * Extracting .jar file in a non case-sensitive file system causing problem
-            * like they didn't treat (e.g. "G.class" and "g.class") files as different file,
-            * so they overwrite each other.
-            * To tackle this, we need to handle this in memory.
-            */
-            // Extract "g.class" then modify the SHA-256 hash.
-            string modGClass = Utils.ExtractZipEntry(live2dMain, CEAppDef_CLASS);
-            modGClass = Utils.ReplaceStringInBinaryFile(
-                modGClass,
-                $"{modGClass}.mod",
-                oldRlmHash,
-                newRlmHash
-            );
+                /*
+                * Extracting .jar file in a non case-sensitive file system causing problem
+                * like they didn't treat (e.g. "G.class" and "g.class") files as different file,
+                * so they overwrite each other.
+                * To tackle this, we need to handle this in memory.
+                */
+                // Extract "g.class" then modify the SHA-256 hash.
+                string modGClass = Utils.ExtractZipEntry(live2dMain, CEAppDef_CLASS);
+                modGClass = Utils.ReplaceStringInBinaryFile(
+                    modGClass,
+                    $"{modGClass}.mod",
+                    oldRlmHash,
+                    newRlmHash
+                );
 
-            // Store modified contents into a list
-            List<(string, byte[])> modifiedFiles =
-                new() { (CEAppDef_CLASS, File.ReadAllBytes(modGClass)) };
-            // Ignore these files to bypass jar signing
-            List<string> ignoredFiles =
-                new()
+                // Store modified contents into a list
+                List<(string, byte[])> modifiedFiles =
+                    new() { (CEAppDef_CLASS, File.ReadAllBytes(modGClass)) };
+                // Ignore these files to bypass jar signing
+                List<string> ignoredFiles =
+                    new()
+                    {
+                        Utils.NormalizePath("META-INF/MANIFEST.MF"),
+                        Utils.NormalizePath("META-INF/TE-D8685.RSA"),
+                        Utils.NormalizePath("META-INF/TE-D8685.SF")
+                    };
+
+                Utils.ModifyZipContents(live2dMain, live2dMain, modifiedFiles, ignoredFiles);
+
+                // Cleanup temporary files
+                Directory.Delete(
+                    Path.Combine(
+                        APP_LIB_PATH,
+                        CEAppDef_CLASS.Split(Path.DirectorySeparatorChar)[0]
+                    ),
+                    true
+                );
+
+                AnsiConsole.MarkupLine("Done.");
+                goto ChooseAction;
+            }
+            catch
+            {
+                // Cleanup operation files and return the original files if there's failure.
+                if (File.Exists(live2dMain))
                 {
-                    Utils.NormalizePath("META-INF/MANIFEST.MF"),
-                    Utils.NormalizePath("META-INF/TE-D8685.RSA"),
-                    Utils.NormalizePath("META-INF/TE-D8685.SF")
-                };
+                    File.Delete(live2dMain);
+                    File.Move(live2dMainBackup, live2dMain, true);
+                }
 
-            File.Copy(live2dMain, live2dMainBackup, true); // Backup Live2D_Cubism.jar
+                if (File.Exists(rlmPath))
+                {
+                    File.Delete(rlmPath);
+                    File.Move(rlmBackup, rlmPath, true);
+                }
 
-            Utils.ModifyZipContents(live2dMain, live2dMain, modifiedFiles, ignoredFiles);
-
-            // Cleanup temporary files
-            Directory.Delete(
-                Path.Combine(APP_LIB_PATH, CEAppDef_CLASS.Split(Path.DirectorySeparatorChar)[0]),
-                true
-            );
-
-            AnsiConsole.MarkupLine("Done.");
-            goto ChooseAction;
+                string gClassRootDirectory = Path.Combine(
+                    APP_LIB_PATH,
+                    CEAppDef_CLASS.Split(Path.DirectorySeparatorChar)[0]
+                );
+                if (Directory.Exists(gClassRootDirectory))
+                    Directory.Delete(gClassRootDirectory, true);
+            }
 
             Revoke:
             // Should we use SHA-256 to detect if it's the original/modded file?
@@ -143,14 +170,14 @@ namespace Kiraio.LoveL2D
             File.Delete(live2dMain);
             File.Delete(rlmPath);
 
-            File.Move(live2dMainBackup, $"{live2dMainBackup.Replace(".bak", "")}");
-            File.Move(rlmBackup, $"{rlmBackup.Replace(".bak", "")}");
+            File.Move(live2dMainBackup, $"{live2dMainBackup.Replace(".bak", "")}", true);
+            File.Move(rlmBackup, $"{rlmBackup.Replace(".bak", "")}", true);
             goto ChooseAction;
         }
 
         static void PrintHelp()
         {
-            AnsiConsole.MarkupLineInterpolated($"[bold red]Love Live2D v{VERSION}[/]");
+            AnsiConsole.MarkupLineInterpolated($"[bold pink3]Love Live2D v{VERSION}[/]");
             Console.WriteLine();
             AnsiConsole.MarkupLine(
                 "Unlock the full power of [link=https://www.live2d.com/en/]Live2D Cubism[/] for free!"
@@ -159,7 +186,7 @@ namespace Kiraio.LoveL2D
                 "For more information, visit: [link]https://github.com/kiraio-moe/LoveLive2D[/]"
             );
             Console.WriteLine();
-            AnsiConsole.MarkupLine("[bold]Supported version[/]: 5.0.00^");
+            AnsiConsole.MarkupLine("[bold]Supported version[/]: 5.0.00+");
             Console.WriteLine();
         }
     }
