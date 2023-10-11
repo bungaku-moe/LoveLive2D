@@ -20,7 +20,7 @@ namespace Kiraio.LoveL2D
             PrintHelp();
 
             ChooseAction:
-            string[] actionList = { "Patch Pro License", "Revoke License", "Exit" };
+            string[] actionList = { "Patch Pro License", "Revoke Pro License", "Exit" };
             string actionPrompt = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("What would you like to do?")
@@ -69,8 +69,11 @@ namespace Kiraio.LoveL2D
 
             string rlmPath = Path.Combine(APP_LIB_PATH, RLM);
             string oldRlmHash = Utils.GetSHA256(rlmPath);
-            string rlmBackup = $"{rlmPath}.bak";
             string modRlm = Path.Combine(execDirectory ?? string.Empty, MOD_LIB_PATH, RLM);
+            string rlmBackup = $"{rlmPath}.bak";
+            string live2dMain = Path.Combine(APP_LIB_PATH, LIVE2D_CUBISM_MAIN);
+            string live2dMainBackup = $"{live2dMain}.bak";
+            CEAppDef_CLASS = Path.Combine(LIVE2D_CUBISM_PACKAGE, CEAppDef_CLASS);
 
             switch (choiceIndex)
             {
@@ -84,10 +87,7 @@ namespace Kiraio.LoveL2D
             // v5.0.0^
             File.Move(rlmPath, rlmBackup, true); // Backup original rlm
             File.Copy(modRlm, rlmPath, true); // Copy MOD rlm to installation path
-
             string newRlmHash = Utils.GetSHA256(rlmPath);
-            string live2dMain = Path.Combine(APP_LIB_PATH, LIVE2D_CUBISM_MAIN);
-            CEAppDef_CLASS = Path.Combine(LIVE2D_CUBISM_PACKAGE, CEAppDef_CLASS);
 
             AnsiConsole.MarkupLineInterpolated($"Patching [green]{live2dMain}[/]...");
 
@@ -118,7 +118,7 @@ namespace Kiraio.LoveL2D
                     Utils.NormalizePath("META-INF/TE-D8685.SF")
                 };
 
-            File.Copy(live2dMain, $"{live2dMain}.bak", true); // Backup Live2D_Cubism.jar
+            File.Copy(live2dMain, live2dMainBackup, true); // Backup Live2D_Cubism.jar
 
             Utils.ModifyZipContents(live2dMain, live2dMain, modifiedFiles, ignoredFiles);
 
@@ -132,6 +132,19 @@ namespace Kiraio.LoveL2D
             goto ChooseAction;
 
             Revoke:
+            // Should we use SHA-256 to detect if it's the original/modded file?
+            if (!File.Exists(live2dMainBackup) || !File.Exists(rlmBackup))
+            {
+                AnsiConsole.MarkupLine("[red]No Pro license applied![/]");
+                goto ChooseAction;
+            }
+
+            AnsiConsole.MarkupLine("[green]Revoking license...[/]");
+            File.Delete(live2dMain);
+            File.Delete(rlmPath);
+
+            File.Move(live2dMainBackup, $"{live2dMainBackup.Replace(".bak", "")}");
+            File.Move(rlmBackup, $"{rlmBackup.Replace(".bak", "")}");
             goto ChooseAction;
         }
 
@@ -142,10 +155,12 @@ namespace Kiraio.LoveL2D
             AnsiConsole.MarkupLine(
                 "Unlock the full power of [link=https://www.live2d.com/en/]Live2D Cubism[/] for free!"
             );
-            Console.WriteLine();
             AnsiConsole.MarkupLine(
                 "For more information, visit: [link]https://github.com/kiraio-moe/LoveLive2D[/]"
             );
+            Console.WriteLine();
+            AnsiConsole.MarkupLine("[bold]Supported version[/]: 5.0.00^");
+            Console.WriteLine();
         }
     }
 }

@@ -216,7 +216,7 @@ namespace Kiraio.LoveL2D
                 }
                 else
                     AnsiConsole.MarkupLineInterpolated(
-                        $"Entry [green]{entryName}[] not found in the ZIP file."
+                        $"Entry [red]{entryName}[/] not found in the ZIP file."
                     );
             }
             catch (Exception ex)
@@ -299,7 +299,7 @@ namespace Kiraio.LoveL2D
                                 }
                             }
                             else
-                                AnsiConsole.MarkupLineInterpolated($"Skipping {entryName}");
+                                AnsiConsole.MarkupLineInterpolated($"Skipping {entry.Name}");
                         }
                     }
 
@@ -307,7 +307,7 @@ namespace Kiraio.LoveL2D
                     File.WriteAllBytes(outputFile, modifiedZipStream.ToArray());
                 }
 
-                AnsiConsole.MarkupLineInterpolated($"[green]{inputFile}[/] file modified and saved as {outputFile} successfully.");
+                AnsiConsole.MarkupLineInterpolated($"[green]{inputFile}[/] file modified and saved as [green]{outputFile}[/] successfully.");
             }
             catch (Exception ex)
             {
