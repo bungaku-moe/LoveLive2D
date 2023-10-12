@@ -1,0 +1,22 @@
+{
+  "projectVersion": 1,
+  "files": [
+    "..\\rlm1501.jar"
+  ],
+  "treeExpansions": [
+    [
+      "com.reprisesoftware.rlm",
+      "Source code",
+      "rlm1501.jar"
+    ]
+  ],
+  "codeData": {
+    "comments": [],
+    "renames": []
+  },
+  "openTabs": [],
+  "activeTab": -1,
+  "cacheDir": "..\\rlm1501.jar.cache",
+  "enableLiveReload": false,
+  "searchHistory": []
+}
