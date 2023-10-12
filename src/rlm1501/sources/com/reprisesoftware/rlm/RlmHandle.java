@@ -299,14 +299,14 @@ public class RlmHandle implements RlmConstants {
         RlmAvailableProduct prod = new RlmAvailableProduct();
         prod.setName("live2d_editorc-3");
         prod.setVersion("3.0");
-        prod.setActKey("CHCC-1234-5678-9012-3456");
+        prod.setActKey("PEAA-1234-5678-9012-3456");
         prod.setCount(0);
         prod.setCurrentInUse(0);
         prod.setCurrentResUse(0);
-        prod.setContract("LiveDDDDDDDDD");
+        prod.setContract("Live2D Cubism");
         prod.setCustomer("kiraio");
         prod.setExpDays(0);
-        // prod.setExpTime("");
+        prod.setExpTime("");
         prod.setExpiration("permanent");
         prod.setHostBased(0);
         prod.setHostId("ANY");
