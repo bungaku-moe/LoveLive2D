@@ -170,7 +170,7 @@ namespace Kiraio.LoveL2D
             }
 
             AnsiConsole.MarkupLineInterpolated(
-                $"Replaced string in {originalFile}: [green]{counter}[/]"
+                $"Successfully replaced [green]string[/] in [green]{originalFile}[/]: [green]{counter}[/]"
             );
             return outputFile;
         }
@@ -211,12 +211,12 @@ namespace Kiraio.LoveL2D
                     zipStream.CopyTo(outputFileStream);
 
                     AnsiConsole.MarkupLineInterpolated(
-                        $"Entry [green]{entryName}[/] extracted as [green]{outputFilePath}[/]."
+                        $"Zip Entry [green]{entryName}[/] extracted as [green]{outputFilePath}[/]."
                     );
                 }
                 else
                     AnsiConsole.MarkupLineInterpolated(
-                        $"Entry [red]{entryName}[/] not found in the ZIP file."
+                        $"Zip Entry [red]{entryName}[/] not found in the ZIP file."
                     );
             }
             catch (Exception ex)
@@ -236,7 +236,7 @@ namespace Kiraio.LoveL2D
         {
             try
             {
-                AnsiConsole.MarkupLineInterpolated($"Modifying {inputFile}...");
+                AnsiConsole.MarkupLineInterpolated($"Modifying Zip archive: [green]{inputFile}[/]...");
 
                 // Read the input ZIP file into memory
                 byte[] zipBytes = File.ReadAllBytes(inputFile);
@@ -250,6 +250,8 @@ namespace Kiraio.LoveL2D
                     // Create a ZipOutputStream to write the modified contents
                     using (ZipOutputStream zipOutputStream = new(modifiedZipStream))
                     {
+                        AnsiConsole.MarkupLineInterpolated($"Rewriting Zip archive [green]{outputFile}[/]...");
+
                         foreach (ZipEntry entry in inputZipFile)
                         {
                             // Check if the entry should be modified and is not in the ignored list
@@ -265,7 +267,7 @@ namespace Kiraio.LoveL2D
                                 if (entryName != null)
                                 {
                                     AnsiConsole.MarkupLineInterpolated(
-                                        $"Modifying Entry: [green]{entryName}[/]..."
+                                        $"Modifying Zip Entry: [green]{entryName}[/]..."
                                     );
                                     // Modify the entry content
                                     byte[] modifiedContentBytes = entryData;
@@ -299,7 +301,7 @@ namespace Kiraio.LoveL2D
                                 }
                             }
                             else
-                                AnsiConsole.MarkupLineInterpolated($"Skipping {entry.Name}");
+                                AnsiConsole.MarkupLineInterpolated($"Skipping Zip Entry: [green]{entry.Name}[/]");
                         }
                     }
 
@@ -308,7 +310,7 @@ namespace Kiraio.LoveL2D
                 }
 
                 AnsiConsole.MarkupLineInterpolated(
-                    $"[green]{inputFile}[/] file modified and saved as [green]{outputFile}[/] successfully."
+                    $"Zip archive modified [green]successfully[/]."
                 );
             }
             catch (Exception ex)

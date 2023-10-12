@@ -34,8 +34,9 @@ namespace Kiraio.LoveL2D
 
             switch (choiceIndex)
             {
-                case 0:
-                case 1:
+                case 0: // Patch
+                case 1: // Revoke
+                    AnsiConsole.MarkupLine("Selecting [bold orange1]Live2D Cubism[/] executable...");
                     filePicker = Dialog.FileOpen(
                         "exe",
                         Path.GetDirectoryName(Utils.GetLastOpenedFile()) ?? execDirectory
@@ -50,7 +51,7 @@ namespace Kiraio.LoveL2D
                     }
 
                     break;
-                case 2:
+                case 2: // Exit
                 default:
                     return;
             }
@@ -60,7 +61,7 @@ namespace Kiraio.LoveL2D
 
             if (!Directory.Exists(APP_LIB_PATH))
             {
-                AnsiConsole.MarkupLine("No Live2D Cubism data found!");
+                AnsiConsole.MarkupLineInterpolated($"No Live2D Cubism data found: {APP_LIB_PATH}");
                 return;
             }
 
@@ -92,7 +93,7 @@ namespace Kiraio.LoveL2D
                 File.Copy(modRlm, rlmPath, true); // Copy MOD rlm to installation path
                 string newRlmHash = Utils.GetSHA256(rlmPath);
 
-                AnsiConsole.MarkupLineInterpolated($"Patching [green]{live2dMain}[/]...");
+                AnsiConsole.MarkupLineInterpolated($"Patching [green]{filePicker.Path}[/]...");
 
                 /*
                 * Extracting .jar file in a non case-sensitive file system causing problem
@@ -133,10 +134,14 @@ namespace Kiraio.LoveL2D
                 );
 
                 AnsiConsole.MarkupLine("Done.");
+                Console.WriteLine();
                 goto ChooseAction;
             }
-            catch
+            catch (Exception ex)
             {
+                AnsiConsole.MarkupLineInterpolated($"Failed to patch [red]{live2dMain}[/]!");
+                AnsiConsole.WriteException(ex);
+
                 // Cleanup operation files and return the original files if there's failure.
                 if (File.Exists(live2dMain))
                 {
@@ -159,19 +164,34 @@ namespace Kiraio.LoveL2D
             }
 
             Revoke:
-            // Should we use SHA-256 to detect if it's the original/modded file?
-            if (!File.Exists(live2dMainBackup) || !File.Exists(rlmBackup))
+            try
             {
-                AnsiConsole.MarkupLine("[red]No Pro license applied![/]");
-                goto ChooseAction;
+                // Should we use SHA-256 to detect if it's the original/modded file?
+                if (!File.Exists(live2dMainBackup) || !File.Exists(rlmBackup))
+                {
+                    AnsiConsole.MarkupLine("[red]No Pro license applied![/]");
+                    goto ChooseAction;
+                }
+
+                AnsiConsole.MarkupLineInterpolated($"Revoking license [green]{filePicker.Path}[/]...");
+
+                AnsiConsole.MarkupLine("Deleting the patched files...");
+                File.Delete(live2dMain);
+                File.Delete(rlmPath);
+
+                AnsiConsole.MarkupLine("Getting the backup files...");
+                File.Move(live2dMainBackup, $"{live2dMainBackup.Replace(".bak", "")}", true);
+                File.Move(rlmBackup, $"{rlmBackup.Replace(".bak", "")}", true);
+
+                AnsiConsole.MarkupLine("Done.");
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLineInterpolated($"Failed to revoke license [red]{live2dMain}[/]");
+                AnsiConsole.WriteException(ex);
             }
 
-            AnsiConsole.MarkupLine("[green]Revoking license...[/]");
-            File.Delete(live2dMain);
-            File.Delete(rlmPath);
-
-            File.Move(live2dMainBackup, $"{live2dMainBackup.Replace(".bak", "")}", true);
-            File.Move(rlmBackup, $"{rlmBackup.Replace(".bak", "")}", true);
+            Console.WriteLine();
             goto ChooseAction;
         }
 
