@@ -294,77 +294,138 @@ public class RlmHandle implements RlmConstants {
         }
     }
 
-    private void addProduct(long prodHandle, Vector v, int index) {
+    private void addProduct(long prodHandle, Vector<RlmAvailableProduct> v, int index) {
+        System.out.println("[Love Live2D] Adding fake product...");
         RlmAvailableProduct prod = new RlmAvailableProduct();
-        prod.setName(rlmProductName(prodHandle));
-        prod.setVersion(rlmProductVersion(prodHandle));
-        prod.setActKey(rlmProductActKey(prodHandle));
-        prod.setCount(rlmProductCount(prodHandle));
-        prod.setCurrentInUse(rlmProductCurrentInUse(prodHandle));
-        prod.setCurrentResUse(rlmProductCurrentResUse(prodHandle));
-        prod.setContract(rlmProductContract(prodHandle));
-        prod.setCustomer(rlmProductCustomer(prodHandle));
-        prod.setExpDays(rlmProductExpDays(prodHandle));
-        prod.setExpTime(rlmProductExpTime(prodHandle));
-        prod.setExpiration(rlmProductExpiration(prodHandle));
-        prod.setHostBased(rlmProductHostBased(prodHandle));
-        prod.setHostId(rlmProductHostId(prodHandle));
-        prod.setHold(rlmProductHold(prodHandle));
-        prod.setIsAlias(rlmProductIsAlias(prodHandle));
-        prod.setIsFloating(rlmProductIsFloating(prodHandle));
-        prod.setIsMetered(rlmProductIsMetered(prodHandle));
-        prod.setIsNodelocked(rlmProductIsNodelocked(prodHandle));
-        prod.setIsRoaming(rlmProductIsRoaming(prodHandle));
-        prod.setIsSingle(rlmProductIsSingle(prodHandle));
-        prod.setIssuer(rlmProductIssuer(prodHandle));
-        prod.setMaxRoam(rlmMaxRoam(prodHandle));
-        prod.setMaxRoamCount(rlmMaxRoamCount(prodHandle));
-        prod.setMeterCounter(rlmProductMeterCounter(prodHandle));
-        prod.setMeterCurCount(rlmMeterCurCount(prodHandle));
-        prod.setMaxShare(rlmMaxShare(prodHandle));
-        prod.setMinRemove(rlmMinRemove(prodHandle));
-        prod.setMinCheckout(rlmMinCheckout(prodHandle));
-        prod.setMinTimeout(rlmMinTimeout(prodHandle));
-        prod.setNamedUserCount(rlmProductNamedUserCount(prodHandle));
-        prod.setNRes(rlmNRes(prodHandle));
-        prod.setNRoamAllowed(rlmNRoamAllowed(prodHandle));
-        prod.setOptions(rlmOptions(prodHandle));
-        prod.setCurrentRoam(rlmCurrentRoam(prodHandle));
-        prod.setServer(rlmServer(prodHandle));
-        prod.setShare(rlmShare(prodHandle));
-        prod.setSoftLimit(rlmSoftLimit(prodHandle));
-        prod.setStart(rlmProductStart(prodHandle));
-        prod.setTimeout(rlmTimeout(prodHandle));
-        prod.setTimezone(rlmTimezone(prodHandle));
-        prod.setIsTokenBased(rlmIsTokenBased(prodHandle));
-        prod.setType(rlmType(prodHandle));
-        prod.setUserBased(rlmUserBased(prodHandle));
-        prod.setClientCache(rlmClientCache(prodHandle));
+        prod.setName("live2d_editorc-3");
+        prod.setVersion("3.0");
+        prod.setActKey("CHCC-1234-5678-9012-3456");
+        prod.setCount(0);
+        prod.setCurrentInUse(0);
+        prod.setCurrentResUse(0);
+        prod.setContract("LiveDDDDDDDDD");
+        prod.setCustomer("kiraio");
+        prod.setExpDays(0);
+        // prod.setExpTime("");
+        prod.setExpiration("permanent");
+        prod.setHostBased(0);
+        prod.setHostId("ANY");
+        prod.setHold(0);
+        prod.setIsAlias(0);
+        prod.setIsFloating(0);
+        prod.setIsMetered(0);
+        prod.setIsNodelocked(0);
+        prod.setIsRoaming(0);
+        prod.setIsSingle(0);
+        prod.setIssuer("kiraio");
+        prod.setMaxRoam(0);
+        prod.setMaxRoamCount(0);
+        prod.setMeterCounter(0);
+        prod.setMeterCurCount(0);
+        prod.setMaxShare(99);
+        prod.setMinRemove(0);
+        prod.setMinCheckout(0);
+        prod.setMinTimeout(0);
+        prod.setNamedUserCount(0);
+        prod.setNRes(0);
+        prod.setNRoamAllowed(0);
+        prod.setOptions("");
+        prod.setCurrentRoam(0);
+        prod.setServer("127.0.0.1");
+        prod.setShare(0);
+        prod.setSoftLimit(0);
+        prod.setStart("");
+        prod.setTimeout(0);
+        prod.setTimezone(0);
+        prod.setIsTokenBased(0);
+        prod.setType(0);
+        prod.setUserBased(0);
+        prod.setClientCache(0);
         prod.setProdHandle(prodHandle);
         prod.setIndex(index);
         v.add(prod);
+
+        /*
+        * ORIGINAL CODE
+        */
+        // RlmAvailableProduct prod = new RlmAvailableProduct();
+        // prod.setName(rlmProductName(prodHandle));
+        // prod.setVersion(rlmProductVersion(prodHandle));
+        // prod.setActKey(rlmProductActKey(prodHandle));
+        // prod.setCount(rlmProductCount(prodHandle));
+        // prod.setCurrentInUse(rlmProductCurrentInUse(prodHandle));
+        // prod.setCurrentResUse(rlmProductCurrentResUse(prodHandle));
+        // prod.setContract(rlmProductContract(prodHandle));
+        // prod.setCustomer(rlmProductCustomer(prodHandle));
+        // prod.setExpDays(rlmProductExpDays(prodHandle));
+        // prod.setExpTime(rlmProductExpTime(prodHandle));
+        // prod.setExpiration(rlmProductExpiration(prodHandle));
+        // prod.setHostBased(rlmProductHostBased(prodHandle));
+        // prod.setHostId(rlmProductHostId(prodHandle));
+        // prod.setHold(rlmProductHold(prodHandle));
+        // prod.setIsAlias(rlmProductIsAlias(prodHandle));
+        // prod.setIsFloating(rlmProductIsFloating(prodHandle));
+        // prod.setIsMetered(rlmProductIsMetered(prodHandle));
+        // prod.setIsNodelocked(rlmProductIsNodelocked(prodHandle));
+        // prod.setIsRoaming(rlmProductIsRoaming(prodHandle));
+        // prod.setIsSingle(rlmProductIsSingle(prodHandle));
+        // prod.setIssuer(rlmProductIssuer(prodHandle));
+        // prod.setMaxRoam(rlmMaxRoam(prodHandle));
+        // prod.setMaxRoamCount(rlmMaxRoamCount(prodHandle));
+        // prod.setMeterCounter(rlmProductMeterCounter(prodHandle));
+        // prod.setMeterCurCount(rlmMeterCurCount(prodHandle));
+        // prod.setMaxShare(rlmMaxShare(prodHandle));
+        // prod.setMinRemove(rlmMinRemove(prodHandle));
+        // prod.setMinCheckout(rlmMinCheckout(prodHandle));
+        // prod.setMinTimeout(rlmMinTimeout(prodHandle));
+        // prod.setNamedUserCount(rlmProductNamedUserCount(prodHandle));
+        // prod.setNRes(rlmNRes(prodHandle));
+        // prod.setNRoamAllowed(rlmNRoamAllowed(prodHandle));
+        // prod.setOptions(rlmOptions(prodHandle));
+        // prod.setCurrentRoam(rlmCurrentRoam(prodHandle));
+        // prod.setServer(rlmServer(prodHandle));
+        // prod.setShare(rlmShare(prodHandle));
+        // prod.setSoftLimit(rlmSoftLimit(prodHandle));
+        // prod.setStart(rlmProductStart(prodHandle));
+        // prod.setTimeout(rlmTimeout(prodHandle));
+        // prod.setTimezone(rlmTimezone(prodHandle));
+        // prod.setIsTokenBased(rlmIsTokenBased(prodHandle));
+        // prod.setType(rlmType(prodHandle));
+        // prod.setUserBased(rlmUserBased(prodHandle));
+        // prod.setClientCache(rlmClientCache(prodHandle));
+        // prod.setProdHandle(prodHandle);
+        // prod.setIndex(index);
+        // v.add(prod);
     }
 
     public Vector getAvailableProducts(String product, String version) {
-        Vector v = null;
-        long prodHandle = rlmProducts(this.handle, product, version);
-        if (prodHandle != 0) {
-            v = new Vector();
-            rlmProductFirst(prodHandle);
-            int i = 0 + 1;
-            addProduct(prodHandle, v, 0);
-            while (rlmProductNext(prodHandle) == 0) {
-                int i2 = i;
-                i++;
-                addProduct(prodHandle, v, i2);
-            }
-            if (this.productHandleList == null) {
-                this.productHandleList = new Vector();
-            }
-            Long l = new Long(prodHandle);
-            this.productHandleList.add(l);
-        }
+        System.out.println("[Love Live2D] Return fake product...");
+        Vector<RlmAvailableProduct> v = new Vector<RlmAvailableProduct>();
+        addProduct(1L, v, 1);
         return v;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // Vector v = null;
+        // long prodHandle = rlmProducts(this.handle, product, version);
+        // if (prodHandle != 0) {
+        //     v = new Vector();
+        //     rlmProductFirst(prodHandle);
+        //     int i = 0 + 1;
+        //     addProduct(prodHandle, v, 0);
+        //     while (rlmProductNext(prodHandle) == 0) {
+        //         int i2 = i;
+        //         i++;
+        //         addProduct(prodHandle, v, i2);
+        //     }
+        //     if (this.productHandleList == null) {
+        //         this.productHandleList = new Vector();
+        //     }
+        //     Long l = new Long(prodHandle);
+        //     this.productHandleList.add(l);
+        // }
+        // return v;
     }
 
     /* JADX INFO: Access modifiers changed from: protected */
@@ -434,19 +495,26 @@ public class RlmHandle implements RlmConstants {
     }
 
     public String activateLicense(String url, String key, int count, RlmActHandle actHandle) throws RlmException {
-        long ah;
-        byte[] buf = new byte[102400];
-        if (actHandle == null) {
-            ah = 0;
-        } else {
-            ah = actHandle.getHandle();
-        }
-        int stat = rlmActivate(this.handle, url, key, count, buf, ah);
-        if (stat < 0) {
-            throw new RlmException(stat, this);
-        }
-        this.previouslyActivated = stat == 1;
-        return new String(buf).trim();
+        String licenseActive = "[Love Live2D] Activate license...";
+        System.out.println(licenseActive);
+        return licenseActive;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // long ah;
+        // byte[] buf = new byte[102400];
+        // if (actHandle == null) {
+        //     ah = 0;
+        // } else {
+        //     ah = actHandle.getHandle();
+        // }
+        // int stat = rlmActivate(this.handle, url, key, count, buf, ah);
+        // if (stat < 0) {
+        //     throw new RlmException(stat, this);
+        // }
+        // this.previouslyActivated = stat == 1;
+        // return new String(buf).trim();
     }
 
     public void revokeRehostable(String url, String product, int flags) throws RlmException {
@@ -487,11 +555,17 @@ public class RlmHandle implements RlmConstants {
     }
 
     public boolean actKeyValid(String url, String actKey, String hostID) throws RlmException {
-        int stat = rlmActKeyvalid(this.handle, url, actKey, hostID);
-        if (stat != 0) {
-            throw new RlmException(stat, this);
-        }
+        System.out.println("[Love Live2D] Bypass activation key validity...");
         return true;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // int stat = rlmActKeyvalid(this.handle, url, actKey, hostID);
+        // if (stat != 0) {
+        //     throw new RlmException(stat, this);
+        // }
+        // return true;
     }
 
     public String actKeyValidLicense(String url, String actKey, String hostID) throws RlmException {

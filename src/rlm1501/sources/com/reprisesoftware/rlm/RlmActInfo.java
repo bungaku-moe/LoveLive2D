@@ -23,13 +23,20 @@ public class RlmActInfo implements RlmConstants {
     private native int rlmActInfo(long j, String str, String str2);
 
     public RlmActInfo(RlmHandle rh, String url, String actKey) throws RlmException {
-        long longHandle = rh.getHandle();
-        int stat = rlmActInfo(longHandle, url, actKey);
-        if (stat != 0) {
-            throw new RlmException(stat);
-        }
+        System.out.println("[Love Live2D] Bypass activation info...");
         this.url = url;
         this.actKey = actKey;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // long longHandle = rh.getHandle();
+        // int stat = rlmActInfo(longHandle, url, actKey);
+        // if (stat != 0) {
+        //     throw new RlmException(stat);
+        // }
+        // this.url = url;
+        // this.actKey = actKey;
     }
 
     public String getActKey() {

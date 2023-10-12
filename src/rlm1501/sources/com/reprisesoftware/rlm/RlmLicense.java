@@ -104,23 +104,35 @@ public class RlmLicense implements RlmConstants {
     private native int rlmAuthCheck(long j, String str);
 
     public RlmLicense(RlmHandle handle, String product, String version, int count) throws RlmException {
-        this.licHandle = rlmCheckout(handle.getHandle(), product, version, count);
-        int stat = rlmLicenseStat(this.licHandle);
-        if (stat != 0 && stat != -25 && stat != -39) {
-            throw new RlmException(stat, handle, this);
-        }
+        System.out.println("[Love Live2D] Bypass license validity...");
         this.valid = true;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // this.licHandle = rlmCheckout(handle.getHandle(), product, version, count);
+        // int stat = rlmLicenseStat(this.licHandle);
+        // if (stat != 0 && stat != -25 && stat != -39) {
+        //     throw new RlmException(stat, handle, this);
+        // }
+        // this.valid = true;
     }
 
     public RlmLicense(RlmHandle handle, RlmAvailableProduct product, String version, int count) throws RlmException {
-        long prodHandle = product.getProdHandle();
-        handle.positionProdHandle(prodHandle, product.getIndex());
-        this.licHandle = rlmCheckoutProduct(handle.getHandle(), prodHandle, version, count);
-        int stat = rlmLicenseStat(this.licHandle);
-        if (stat != 0 && stat != -25 && stat != -39) {
-            throw new RlmException(stat, handle, this);
-        }
+        System.out.println("[Love Live2D] Bypass license validity...");
         this.valid = true;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // long prodHandle = product.getProdHandle();
+        // handle.positionProdHandle(prodHandle, product.getIndex());
+        // this.licHandle = rlmCheckoutProduct(handle.getHandle(), prodHandle, version, count);
+        // int stat = rlmLicenseStat(this.licHandle);
+        // if (stat != 0 && stat != -25 && stat != -39) {
+        //     throw new RlmException(stat, handle, this);
+        // }
+        // this.valid = true;
     }
 
     /* JADX INFO: Access modifiers changed from: protected */
@@ -129,11 +141,17 @@ public class RlmLicense implements RlmConstants {
     }
 
     public int status() throws RlmException {
-        if (this.valid) {
-            int stat = rlmLicenseStat(this.licHandle);
-            return stat;
-        }
-        throw new RlmException(-19);
+        System.out.println("[Love Live2D] Always returns valid license status...");
+        return 0;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // if (this.valid) {
+        //     int stat = rlmLicenseStat(this.licHandle);
+        //     return stat;
+        // }
+        // throw new RlmException(-19);
     }
 
     public void checkin() {
@@ -327,11 +345,17 @@ public class RlmLicense implements RlmConstants {
     }
 
     public boolean authCheck(String license) throws RlmException {
-        int stat = rlmAuthCheck(this.licHandle, license);
-        if (stat != 0) {
-            throw new RlmException(stat);
-        }
+        System.out.println("[Love Live2D] Bypass license authentication....");
         return true;
+
+        /*
+        * ORIGINAL CODE
+        */
+        // int stat = rlmAuthCheck(this.licHandle, license);
+        // if (stat != 0) {
+        //     throw new RlmException(stat);
+        // }
+        // return true;
     }
 
     public boolean isSingle() {
