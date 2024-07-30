@@ -6,125 +6,157 @@ namespace Kiraio.LoveL2D
 {
     public class LoveLive2D
     {
-        const string VERSION = "1.0.0";
+        const string VERSION = "1.1.0";
         const string LIVE2D_CUBISM_MAIN = "Live2D_Cubism.jar";
         static readonly string LIVE2D_CUBISM_PACKAGE = Utils.NormalizePath("com/live2d/cubism");
-        static string CEAppDef_CLASS = "g.class"; // Will be combined with LIVE2D_CUBISM_PACKAGE later
+        static string CEAppDef_CLASS = "g.class";
         static string APP_LIB_PATH = Utils.NormalizePath("app/lib");
         const string MOD_LIB_PATH = "lib";
-        readonly static string RLM = "rlm1501.jar";
+        static readonly string RLM = "rlm1501.jar";
 
         static void Main(string[] args)
         {
             AnsiConsole.Background = Color.Grey11;
             PrintHelp();
 
-            ChooseAction:
-            string[] actionList = { "Patch Pro License", "Revoke License", "Exit" };
+            while (true)
+            {
+                int choice = ShowMenu();
+                if (choice == 3) // Exit
+                    return;
+
+                DialogResult filePicker = SelectFile();
+                if (filePicker.IsCancelled || filePicker.IsError)
+                    continue;
+
+                string execDirectory = Path.GetDirectoryName(
+                    Assembly.GetExecutingAssembly().Location
+                );
+                string live2dDirectory = Path.GetDirectoryName(filePicker.Path);
+                APP_LIB_PATH = Path.Combine(live2dDirectory ?? string.Empty, APP_LIB_PATH);
+
+                if (!Directory.Exists(APP_LIB_PATH))
+                {
+                    AnsiConsole.MarkupLineInterpolated(
+                        $"No Live2D Cubism data found: {APP_LIB_PATH}"
+                    );
+                    return;
+                }
+
+                Utils.SaveLastOpenedFile(filePicker.Path ?? string.Empty);
+
+                string originalRlmFile = Path.Combine(APP_LIB_PATH, RLM);
+                string originalRlmHash = Utils.GetSHA256(originalRlmFile);
+                string patchedRlmFile = Path.Combine(
+                    execDirectory ?? string.Empty,
+                    MOD_LIB_PATH,
+                    RLM
+                );
+                string rlmFileBackup = $"{originalRlmFile}.bak";
+                string live2dCoreFile = Path.Combine(APP_LIB_PATH, LIVE2D_CUBISM_MAIN);
+                string live2dCoreFileBackup = $"{live2dCoreFile}.bak";
+                CEAppDef_CLASS = choice == 0 ? "g.class" : "h.class";
+                CEAppDef_CLASS = Path.Combine(LIVE2D_CUBISM_PACKAGE, CEAppDef_CLASS);
+
+                switch (choice)
+                {
+                    case 0:
+                    case 1:
+                        Patch(
+                            filePicker,
+                            originalRlmFile,
+                            originalRlmHash,
+                            patchedRlmFile,
+                            rlmFileBackup,
+                            live2dCoreFile,
+                            live2dCoreFileBackup
+                        );
+                        break;
+                    case 2:
+                        Revoke(
+                            filePicker,
+                            live2dCoreFile,
+                            live2dCoreFileBackup,
+                            originalRlmFile,
+                            rlmFileBackup
+                        );
+                        break;
+                }
+            }
+        }
+
+        static int ShowMenu()
+        {
+            string[] actionList =
+            {
+                "Patch Live2D Cubism Editor v5.0",
+                "Patch Live2D Cubism Editor v5.1",
+                "Revoke License",
+                "Exit"
+            };
             string actionPrompt = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
                     .Title("What would you like to do?")
                     .AddChoices(actionList)
             );
-            int choiceIndex = Array.FindIndex(actionList, item => item == actionPrompt);
+            return Array.FindIndex(actionList, item => item == actionPrompt);
+        }
 
-            string? execDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            string? live2dDirectory = string.Empty;
-            DialogResult filePicker;
+        static DialogResult SelectFile()
+        {
+            AnsiConsole.MarkupLine("Selecting [bold orange1]Live2D Cubism Editor[/] executable...");
+            var execDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            return Dialog.FileOpen(
+                "exe",
+                Path.GetDirectoryName(Utils.GetLastOpenedFile()) ?? execDirectory
+            );
+        }
 
-            switch (choiceIndex)
-            {
-                case 0: // Patch
-                case 1: // Revoke
-                    AnsiConsole.MarkupLine("Selecting [bold orange1]Live2D Cubism[/] executable...");
-                    filePicker = Dialog.FileOpen(
-                        "exe",
-                        Path.GetDirectoryName(Utils.GetLastOpenedFile()) ?? execDirectory
-                    );
-
-                    if (filePicker.IsCancelled)
-                        goto ChooseAction;
-                    else if (filePicker.IsError)
-                    {
-                        AnsiConsole.MarkupLine("[red]Something is wrong.[/]");
-                        goto ChooseAction;
-                    }
-
-                    break;
-                case 2: // Exit
-                default:
-                    return;
-            }
-
-            live2dDirectory = Path.GetDirectoryName(filePicker.Path);
-            APP_LIB_PATH = Path.Combine(live2dDirectory ?? string.Empty, APP_LIB_PATH);
-
-            if (!Directory.Exists(APP_LIB_PATH))
-            {
-                AnsiConsole.MarkupLineInterpolated($"No Live2D Cubism data found: {APP_LIB_PATH}");
-                return;
-            }
-
-            // Save last opened file
-            Utils.SaveLastOpenedFile(filePicker.Path ?? string.Empty);
-
-            string rlmPath = Path.Combine(APP_LIB_PATH, RLM);
-            string oldRlmHash = Utils.GetSHA256(rlmPath);
-            string modRlm = Path.Combine(execDirectory ?? string.Empty, MOD_LIB_PATH, RLM);
-            string rlmBackup = $"{rlmPath}.bak";
-            string live2dMain = Path.Combine(APP_LIB_PATH, LIVE2D_CUBISM_MAIN);
-            string live2dMainBackup = $"{live2dMain}.bak";
-            CEAppDef_CLASS = Path.Combine(LIVE2D_CUBISM_PACKAGE, CEAppDef_CLASS);
-
-            switch (choiceIndex)
-            {
-                case 0:
-                    goto Patch;
-                case 1:
-                    goto Revoke;
-            }
-
-            Patch:
+        static void Patch(
+            DialogResult filePicker,
+            string rlmFile,
+            string originalRlmHash,
+            string pacthedRlmFile,
+            string rlmFileBackup,
+            string live2dCoreFile,
+            string live2dCoreFileBackup
+        )
+        {
             try
             {
-                // v5.0.0^
-                File.Copy(live2dMain, live2dMainBackup, true); // Backup Live2D_Cubism.jar
-                File.Move(rlmPath, rlmBackup, true); // Backup original rlm
-                File.Copy(modRlm, rlmPath, true); // Copy MOD rlm to installation path
-                string newRlmHash = Utils.GetSHA256(rlmPath);
+                File.Copy(live2dCoreFile, live2dCoreFileBackup, true); // Backup Live2D_Cubism.jar
+                File.Move(rlmFile, rlmFileBackup, true); // Backup original rlm
+                File.Copy(pacthedRlmFile, rlmFile, true); // Copy patched rlm to the installation path
+                string patchedRlmHash = Utils.GetSHA256(rlmFile);
 
                 AnsiConsole.MarkupLineInterpolated($"Patching [green]{filePicker.Path}[/]...");
 
-                /*
-                * Extracting .jar file in a non case-sensitive file system causing problem
-                * like they didn't treat (e.g. "G.class" and "g.class") files as different file,
-                * so they overwrite each other.
-                * To tackle this, we need to handle this in memory.
-                */
-                // Extract "g.class" then modify the SHA-256 hash.
-                string modGClass = Utils.ExtractZipEntry(live2dMain, CEAppDef_CLASS);
-                modGClass = Utils.ReplaceStringInBinaryFile(
-                    modGClass,
-                    $"{modGClass}.mod",
-                    oldRlmHash,
-                    newRlmHash
+                string patchedGClass = Utils.ExtractZipEntry(live2dCoreFile, CEAppDef_CLASS);
+                patchedGClass = Utils.ReplaceStringInBinaryFile(
+                    patchedGClass,
+                    $"{patchedGClass}.temp",
+                    originalRlmHash,
+                    patchedRlmHash
                 );
 
-                // Store modified contents into a list
-                List<(string, byte[])> modifiedFiles =
-                    new() { (CEAppDef_CLASS, File.ReadAllBytes(modGClass)) };
-                // Ignore these files to bypass jar signing
-                List<string> ignoredFiles =
-                    new()
-                    {
-                        Utils.NormalizePath("META-INF/MANIFEST.MF"),
-                        Utils.NormalizePath("META-INF/TE-D8685.RSA"),
-                        Utils.NormalizePath("META-INF/TE-D8685.SF")
-                    };
+                List<(string, byte[])> modifiedFiles = new List<(string, byte[])>
+                {
+                    (CEAppDef_CLASS, File.ReadAllBytes(patchedGClass))
+                };
+                List<string> ignoredFiles = new List<string>
+                {
+                    Utils.NormalizePath("META-INF/MANIFEST.MF"),
+                    Utils.NormalizePath("META-INF/TE-D8685.RSA"),
+                    Utils.NormalizePath("META-INF/TE-D8685.SF")
+                };
 
-                Utils.ModifyZipContents(live2dMain, live2dMain, modifiedFiles, ignoredFiles);
+                Utils.ModifyZipContents(
+                    live2dCoreFile,
+                    live2dCoreFile,
+                    modifiedFiles,
+                    ignoredFiles
+                );
 
-                // Cleanup temporary files
                 Directory.Delete(
                     Path.Combine(
                         APP_LIB_PATH,
@@ -133,26 +165,24 @@ namespace Kiraio.LoveL2D
                     true
                 );
 
-                AnsiConsole.MarkupLine("Done.");
+                AnsiConsole.MarkupLine("Done. Enjoy UwU");
                 Console.WriteLine();
-                goto ChooseAction;
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLineInterpolated($"Failed to patch [red]{live2dMain}[/]!");
+                AnsiConsole.MarkupLineInterpolated($"Failed to patch [red]{live2dCoreFile}[/]!");
                 AnsiConsole.WriteException(ex);
 
-                // Cleanup operation files and return the original files if there's failure.
-                if (File.Exists(live2dMain))
+                if (File.Exists(live2dCoreFile))
                 {
-                    File.Delete(live2dMain);
-                    File.Move(live2dMainBackup, live2dMain, true);
+                    File.Delete(live2dCoreFile);
+                    File.Move(live2dCoreFileBackup, live2dCoreFile, true);
                 }
 
-                if (File.Exists(rlmPath))
+                if (File.Exists(rlmFile))
                 {
-                    File.Delete(rlmPath);
-                    File.Move(rlmBackup, rlmPath, true);
+                    File.Delete(rlmFile);
+                    File.Move(rlmFileBackup, rlmFile, true);
                 }
 
                 string gClassRootDirectory = Path.Combine(
@@ -162,37 +192,55 @@ namespace Kiraio.LoveL2D
                 if (Directory.Exists(gClassRootDirectory))
                     Directory.Delete(gClassRootDirectory, true);
             }
+        }
 
-            Revoke:
+        static void Revoke(
+            DialogResult filePicker,
+            string live2dCoreFile,
+            string live2dCoreFileBackup,
+            string rlmFile,
+            string rlmFileBackup
+        )
+        {
             try
             {
-                // Should we use SHA-256 to detect if it's the original/modded file?
-                if (!File.Exists(live2dMainBackup) || !File.Exists(rlmBackup))
+                if (!File.Exists(live2dCoreFileBackup) || !File.Exists(rlmFileBackup))
                 {
-                    AnsiConsole.MarkupLine("[red]No Pro license applied![/]");
-                    goto ChooseAction;
+                    AnsiConsole.MarkupLine("[red]Pro license is'nt applied![/]");
+                    return;
                 }
 
-                AnsiConsole.MarkupLineInterpolated($"Revoking license [green]{filePicker.Path}[/]...");
+                AnsiConsole.MarkupLineInterpolated(
+                    $"Revoking license [green]{filePicker.Path}[/]..."
+                );
 
                 AnsiConsole.MarkupLine("Deleting the patched files...");
-                File.Delete(live2dMain);
-                File.Delete(rlmPath);
+                File.Delete(live2dCoreFile);
+                File.Delete(rlmFile);
 
-                AnsiConsole.MarkupLine("Getting the backup files...");
-                File.Move(live2dMainBackup, $"{live2dMainBackup.Replace(".bak", "")}", true);
-                File.Move(rlmBackup, $"{rlmBackup.Replace(".bak", "")}", true);
+                AnsiConsole.MarkupLine("Restoring original files from the backup...");
+                if (!File.Exists(live2dCoreFileBackup) || !File.Exists(rlmFileBackup))
+                {
+                    AnsiConsole.MarkupLine(
+                        $"[red]One or more backup files ({live2dCoreFileBackup}, {rlmFileBackup}) doesn\'t exists![/] Did you delete them? If yes, just reinstall Live2D Cubism, no need to revoke the license."
+                    );
+                    return;
+                }
+
+                File.Move(live2dCoreFileBackup, live2dCoreFile, true);
+                File.Move(rlmFileBackup, rlmFile, true);
 
                 AnsiConsole.MarkupLine("Done.");
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLineInterpolated($"Failed to revoke license [red]{live2dMain}[/]");
+                AnsiConsole.MarkupLineInterpolated(
+                    $"Failed to revoke license [red]{live2dCoreFile}[/]"
+                );
                 AnsiConsole.WriteException(ex);
             }
 
             Console.WriteLine();
-            goto ChooseAction;
         }
 
         static void PrintHelp()
@@ -206,7 +254,7 @@ namespace Kiraio.LoveL2D
                 "For more information, visit: [link]https://github.com/kiraio-moe/LoveLive2D[/]"
             );
             Console.WriteLine();
-            AnsiConsole.MarkupLine("[bold]Supported version[/]: 5.0.00+");
+            AnsiConsole.MarkupLine("[bold]Supported versions[/]: 5.0, 5.1");
             Console.WriteLine();
         }
     }
