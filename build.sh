@@ -3,7 +3,7 @@
 VERSION=$(<version.txt)
 
 # Build Love Live2D
-echo "Building Love Live2D..."
+echo "Building Love Live2D ${VERSION}..."
 # dotnet build -c Release
 # echo "Build process completed for all target OS architectures."
 # Define the target operating systems and architectures
@@ -52,8 +52,7 @@ else
     echo "Packing failed. JAR file not created."
 fi
 
-# Create "lib" directory to store modified "rlm1501.jar"
-echo "Distributing rlm1501.jar for every architecture..."
+echo "Distributing asset files for every architecture..."
 for framework in "${TARGET_FRAMEWORKS[@]}"
 do
     for os_arch in "${TARGET_OS_ARCHITECTURES[@]}"
@@ -62,6 +61,7 @@ do
         LIB_PATH="bin/Release/${framework}/${os_arch}/publish/lib"
         mkdir -p "${LIB_PATH}"
         cp "${OUTPUT_JAR}" "${LIB_PATH}"
+        cp "version.txt" "bin/Release/${framework}/${os_arch}/publish"
     done
 
     for os_arch in "${TARGET_OS_ARCHITECTURES[@]}"
