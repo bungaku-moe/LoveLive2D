@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using ICSharpCode.SharpZipLib.Zip;
@@ -89,13 +90,13 @@ namespace Kiraio.LoveL2D
         }
 
         /// <summary>
-        /// Copy data from a file to an other, replacing search term, ignoring case.
+        /// Copy data from a file to another, replacing search term, ignoring case.
         /// </summary>
         /// <param name="originalFile"></param>
         /// <param name="outputFile"></param>
         /// <param name="searchTerm"></param>
         /// <param name="replaceTerm"></param>
-        internal static string ReplaceStringInBinaryFile(
+        internal static bool ReplaceStringInBinaryFile(
             string originalFile,
             string outputFile,
             string searchTerm,
@@ -118,6 +119,8 @@ namespace Kiraio.LoveL2D
             //Replace with bytes
             byte[] replaceBytes = Encoding.UTF8.GetBytes(replaceTerm);
             int counter = 0;
+
+            bool isSuccess = false;
 
             using (FileStream inputStream = File.OpenRead(originalFile))
             {
@@ -157,6 +160,11 @@ namespace Kiraio.LoveL2D
                             ++counter;
                             outputWriter.Write(replaceBytes);
                             nSrc += nSearch - 1;
+
+                            isSuccess = true;
+                            AnsiConsole.MarkupLineInterpolated(
+                                $"Successfully replaced [green]string[/] in [green]{originalFile}[/]: [green]{counter}[/]"
+                            );
                         }
                         else
                         {
@@ -169,10 +177,7 @@ namespace Kiraio.LoveL2D
                         outputWriter.Write(b);
             }
 
-            AnsiConsole.MarkupLineInterpolated(
-                $"Successfully replaced [green]string[/] in [green]{originalFile}[/]: [green]{counter}[/]"
-            );
-            return outputFile;
+            return isSuccess;
         }
 
         internal static string ExtractZipEntry(
@@ -210,14 +215,14 @@ namespace Kiraio.LoveL2D
                     using FileStream outputFileStream = File.Create(outputFilePath);
                     zipStream.CopyTo(outputFileStream);
 
-                    AnsiConsole.MarkupLineInterpolated(
-                        $"Zip Entry [green]{entryName}[/] extracted as [green]{outputFilePath}[/]."
-                    );
+                    // AnsiConsole.MarkupLineInterpolated(
+                    //     $"Zip Entry [green]{entryName}[/] extracted as [green]{outputFilePath}[/]."
+                    // );
                 }
-                else
-                    AnsiConsole.MarkupLineInterpolated(
-                        $"Zip Entry [red]{entryName}[/] not found in the ZIP file."
-                    );
+                // else
+                //     AnsiConsole.MarkupLineInterpolated(
+                //         $"Zip Entry [red]{entryName}[/] not found in the ZIP file."
+                //     );
             }
             catch (Exception ex)
             {
@@ -227,17 +232,176 @@ namespace Kiraio.LoveL2D
             return outputFilePath;
         }
 
-        internal static string ModifyZipContents(
+        internal static List<string> ExtractZipEntries(
+            string zipFilePath,
+            string folderPath,
+            string outputDirectory
+        )
+        {
+            List<string> entries = new();
+
+            // Ensure the folderPath ends with a separator
+            if (!folderPath.EndsWith("/", StringComparison.OrdinalIgnoreCase))
+                folderPath += "/";
+
+            try
+            {
+                using ZipFile zipFile = new(zipFilePath);
+
+                // Ensure the output directory exists
+                if (!Directory.Exists(outputDirectory))
+                    Directory.CreateDirectory(outputDirectory);
+
+                foreach (ZipEntry entry in zipFile)
+                {
+                    // Check if the entry is a file and is within the specified folderPath
+                    if (
+                        !entry.IsDirectory
+                        && entry.Name.StartsWith(folderPath, StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        // Remove the folderPath from the entry name
+                        string relativePath = entry.Name.Substring(folderPath.Length);
+
+                        // Ensure the file is directly within the specified folderPath (no further slashes)
+                        if (!relativePath.Contains("/"))
+                        {
+                            // Construct the output file path
+                            string outputFilePath = Path.Combine(outputDirectory, relativePath);
+
+                            // Ensure the output directory for the file exists
+                            string fileDirectory =
+                                Path.GetDirectoryName(outputFilePath) ?? string.Empty;
+                            if (!Directory.Exists(fileDirectory))
+                            {
+                                Directory.CreateDirectory(fileDirectory);
+                            }
+
+                            using Stream zipStream = zipFile.GetInputStream(entry);
+                            using FileStream outputFileStream = File.Create(outputFilePath);
+                            zipStream.CopyTo(outputFileStream);
+
+                            entries.Add(outputFilePath);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.WriteException(ex);
+            }
+
+            return entries;
+        }
+
+        // internal static string ModifyZipContents(
+        //     string inputFile,
+        //     string outputFile,
+        //     List<(string entryName, byte[] entryData)> modifiedFiles,
+        //     List<string>? ignoredFiles = null
+        // )
+        // {
+        //     try
+        //     {
+        //         // AnsiConsole.MarkupLineInterpolated(
+        //         //     $"Modifying Zip archive: [green]{inputFile}[/]..."
+        //         // );
+
+        //         // Read the input ZIP file into memory
+        //         byte[] zipBytes = File.ReadAllBytes(inputFile);
+
+        //         using (MemoryStream zipStream = new(zipBytes))
+        //         {
+        //             // Unpack the ZIP file into memory
+        //             using ZipFile inputZipFile = new(zipStream);
+        //             // Create a new in-memory stream to store the modified ZIP file
+        //             using MemoryStream modifiedZipStream = new();
+        //             // Create a ZipOutputStream to write the modified contents
+        //             using (ZipOutputStream zipOutputStream = new(modifiedZipStream))
+        //             {
+        //                 //     AnsiConsole.MarkupLineInterpolated(
+        //                 //         $"Rewriting Zip archive [green]{outputFile}[/]..."
+        //                 //     );
+
+        //                 foreach (ZipEntry entry in inputZipFile)
+        //                 {
+        //                     // Check if the entry should be modified and is not in the ignored list
+        //                     (string? entryName, byte[] entryData) = modifiedFiles.FirstOrDefault(
+        //                         f => ZipEntry.CleanName(f.entryName) == entry.Name
+        //                     );
+        //                     bool ignored =
+        //                         ignoredFiles?.Any(file => ZipEntry.CleanName(file) == entry.Name)
+        //                         ?? false;
+
+        //                     if (!ignored)
+        //                     {
+        //                         if (entryName != null)
+        //                         {
+        //                             // AnsiConsole.MarkupLineInterpolated(
+        //                             //     $"Modifying Zip Entry: [green]{entryName}[/]..."
+        //                             // );
+        //                             // Modify the entry content
+        //                             byte[] modifiedContentBytes = entryData;
+        //                             ZipEntry modifiedEntry = new(entry.Name);
+        //                             zipOutputStream.PutNextEntry(modifiedEntry);
+        //                             zipOutputStream.Write(
+        //                                 modifiedContentBytes,
+        //                                 0,
+        //                                 modifiedContentBytes.Length
+        //                             );
+        //                             zipOutputStream.CloseEntry();
+        //                         }
+        //                         else
+        //                         {
+        //                             // Copy unchanged entries to the modified ZIP
+        //                             using Stream entryStream = inputZipFile.GetInputStream(entry);
+        //                             // Create a new entry and copy the content
+        //                             ZipEntry newEntry = new(entry.Name);
+        //                             zipOutputStream.PutNextEntry(newEntry);
+
+        //                             byte[] buffer = new byte[4096];
+        //                             int bytesRead;
+        //                             while (
+        //                                 (bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0
+        //                             )
+        //                             {
+        //                                 zipOutputStream.Write(buffer, 0, bytesRead);
+        //                             }
+
+        //                             zipOutputStream.CloseEntry();
+        //                         }
+        //                     }
+        //                     // else
+        //                     //     AnsiConsole.MarkupLineInterpolated(
+        //                     //         $"Skipping Zip Entry: [green]{entry.Name}[/]"
+        //                     //     );
+        //                 }
+        //             }
+
+        //             // Save the modified ZIP file to disk
+        //             File.WriteAllBytes(outputFile, modifiedZipStream.ToArray());
+        //         }
+
+        //         // AnsiConsole.MarkupLineInterpolated($"Zip archive modified [green]successfully[/].");
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         AnsiConsole.WriteException(ex);
+        //     }
+
+        //     return outputFile;
+        // }
+
+        internal static void ModifyZipContents(
             string inputFile,
             string outputFile,
-            List<(string entryName, byte[] entryData)> modifiedFiles,
+            string originalRlmHash,
+            string patchedRlmHash,
             List<string>? ignoredFiles = null
         )
         {
             try
             {
-                AnsiConsole.MarkupLineInterpolated($"Modifying Zip archive: [green]{inputFile}[/]...");
-
                 // Read the input ZIP file into memory
                 byte[] zipBytes = File.ReadAllBytes(inputFile);
 
@@ -250,58 +414,45 @@ namespace Kiraio.LoveL2D
                     // Create a ZipOutputStream to write the modified contents
                     using (ZipOutputStream zipOutputStream = new(modifiedZipStream))
                     {
-                        AnsiConsole.MarkupLineInterpolated($"Rewriting Zip archive [green]{outputFile}[/]...");
-
                         foreach (ZipEntry entry in inputZipFile)
                         {
-                            // Check if the entry should be modified and is not in the ignored list
-                            (string? entryName, byte[] entryData) = modifiedFiles.FirstOrDefault(
-                                f => ZipEntry.CleanName(f.entryName) == entry.Name
-                            );
                             bool ignored =
                                 ignoredFiles?.Any(file => ZipEntry.CleanName(file) == entry.Name)
                                 ?? false;
 
                             if (!ignored)
                             {
-                                if (entryName != null)
+                                using Stream entryStream = inputZipFile.GetInputStream(entry);
+                                using MemoryStream entryMemoryStream = new();
+                                entryStream.CopyTo(entryMemoryStream);
+                                byte[] entryData = entryMemoryStream.ToArray();
+
+                                bool replaced = ReplaceStringInMemory(
+                                    entryData,
+                                    originalRlmHash,
+                                    patchedRlmHash,
+                                    out byte[] modifiedEntryData
+                                );
+
+                                if (replaced)
                                 {
-                                    AnsiConsole.MarkupLineInterpolated(
-                                        $"Modifying Zip Entry: [green]{entryName}[/]..."
-                                    );
-                                    // Modify the entry content
-                                    byte[] modifiedContentBytes = entryData;
                                     ZipEntry modifiedEntry = new(entry.Name);
                                     zipOutputStream.PutNextEntry(modifiedEntry);
                                     zipOutputStream.Write(
-                                        modifiedContentBytes,
+                                        modifiedEntryData,
                                         0,
-                                        modifiedContentBytes.Length
+                                        modifiedEntryData.Length
                                     );
                                     zipOutputStream.CloseEntry();
                                 }
                                 else
                                 {
-                                    // Copy unchanged entries to the modified ZIP
-                                    using Stream entryStream = inputZipFile.GetInputStream(entry);
-                                    // Create a new entry and copy the content
                                     ZipEntry newEntry = new(entry.Name);
                                     zipOutputStream.PutNextEntry(newEntry);
-
-                                    byte[] buffer = new byte[4096];
-                                    int bytesRead;
-                                    while (
-                                        (bytesRead = entryStream.Read(buffer, 0, buffer.Length)) > 0
-                                    )
-                                    {
-                                        zipOutputStream.Write(buffer, 0, bytesRead);
-                                    }
-
+                                    zipOutputStream.Write(entryData, 0, entryData.Length);
                                     zipOutputStream.CloseEntry();
                                 }
                             }
-                            else
-                                AnsiConsole.MarkupLineInterpolated($"Skipping Zip Entry: [green]{entry.Name}[/]");
                         }
                     }
 
@@ -309,16 +460,71 @@ namespace Kiraio.LoveL2D
                     File.WriteAllBytes(outputFile, modifiedZipStream.ToArray());
                 }
 
-                AnsiConsole.MarkupLineInterpolated(
-                    $"Zip archive modified [green]successfully[/]."
-                );
+                // AnsiConsole.MarkupLineInterpolated($"Zip archive modified [green]successfully[/].");
             }
             catch (Exception ex)
             {
                 AnsiConsole.WriteException(ex);
             }
+        }
 
-            return outputFile;
+        internal static bool ReplaceStringInMemory(
+            byte[] data,
+            string searchTerm,
+            string replaceTerm,
+            out byte[] modifiedData
+        )
+        {
+            bool replaced = false;
+
+            byte[] searchBytesUpper = Encoding.UTF8.GetBytes(searchTerm.ToUpper());
+            byte[] searchBytesLower = Encoding.UTF8.GetBytes(searchTerm.ToLower());
+            byte[] replaceBytes = Encoding.UTF8.GetBytes(replaceTerm);
+            int searchLength = searchBytesUpper.Length;
+
+            using MemoryStream outputStream = new();
+            int i = 0;
+
+            while (i < data.Length)
+            {
+                if (IsMatch(data, i, searchBytesUpper, searchBytesLower))
+                {
+                    replaced = true;
+                    outputStream.Write(replaceBytes, 0, replaceBytes.Length);
+                    i += searchLength;
+                }
+                else
+                {
+                    outputStream.WriteByte(data[i]);
+                    i++;
+                }
+            }
+
+            modifiedData = outputStream.ToArray();
+            return replaced;
+        }
+
+        private static bool IsMatch(
+            byte[] buffer,
+            int offset,
+            byte[] searchBytesUpper,
+            byte[] searchBytesLower
+        )
+        {
+            for (int i = 0; i < searchBytesUpper.Length; i++)
+            {
+                if (
+                    offset + i >= buffer.Length
+                    || (
+                        buffer[offset + i] != searchBytesUpper[i]
+                        && buffer[offset + i] != searchBytesLower[i]
+                    )
+                )
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         internal static string UnZip(string filePath, string? outputFolder = null)
