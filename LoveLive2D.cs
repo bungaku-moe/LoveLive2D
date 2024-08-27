@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Reflection;
+﻿using System.Reflection;
 using NativeFileDialogSharp;
 using Spectre.Console;
 
@@ -9,8 +8,8 @@ namespace Kiraio.LoveL2D
     {
         const string LIVE2D_CUBISM_MAIN = "Live2D_Cubism.jar";
         static readonly string LIVE2D_CUBISM_PACKAGE = Utils.NormalizePath("com/live2d/cubism");
-        static string APP_LIB_PATH = Utils.NormalizePath("app/lib");
-        const string MOD_LIB_PATH = "lib";
+        // static string APP_LIB_PATH = Utils.NormalizePath("app/lib");
+        // const string MOD_LIB_PATH = "lib";
         static readonly string RLM = "rlm1501.jar";
 
         static void Main(string[] args)
@@ -20,59 +19,92 @@ namespace Kiraio.LoveL2D
 
             while (true)
             {
-                string[] actionList =
-                {
-                    "Patch Live2D Cubism Editor v5",
-                    "Revoke Live2D Cubism Editor v5 license",
-                    "Exit"
-                };
-                int choice = ShowMenu(actionList);
-                if (choice == actionList.Length - 1) // Exit
-                    return;
+                int actionChoice;
+                string pickedFile = "";
 
-                DialogResult filePicker = SelectFile();
-                if (filePicker.IsCancelled || filePicker.IsError)
-                    continue;
+                if (!(args.Length > 0))
+                {
+                    string[] actionList =
+                    {
+                        "Patch Live2D Cubism Editor v5",
+                        "Revoke Live2D Cubism Editor v5 license",
+                        "Exit"
+                    };
+                    actionChoice = ShowMenu(actionList);
+                    if (actionChoice == actionList.Length - 1) // Exit
+                        return;
+
+                    DialogResult filePicker = SelectFile();
+                    if (filePicker.IsCancelled)
+                    {
+                        AnsiConsole.MarkupLine("Cancelled.");
+                        continue;
+                    }
+                    if (filePicker.IsError)
+                    {
+                        AnsiConsole.WriteException(new Exception($"Something went wrong! Can\'t open File Picker."));
+                        continue;
+                    }
+                    pickedFile = filePicker.Path;
+                }
+                else
+                {
+                    Console.WriteLine(Directory.Exists(args[0]));
+                    pickedFile = Directory.Exists(args[0]) ? args[0] : pickedFile;
+                    //! REVERSED! 1 = patch, 0 = revoke
+                    actionChoice = int.Parse(args[1]) == 0 ? 1 : 0;
+                }
 
                 string execDirectory = Path.GetDirectoryName(
                     Assembly.GetExecutingAssembly().Location
-                );
-                string live2dDirectory = Path.GetDirectoryName(filePicker.Path);
-                APP_LIB_PATH = Path.Combine(live2dDirectory ?? string.Empty, APP_LIB_PATH);
+                ) ?? string.Empty;
+                string live2dDirectory = Path.GetDirectoryName(pickedFile) ?? string.Empty;
+                string resourceDirectory = Path.Combine(live2dDirectory, "app/lib");
+                resourceDirectory = Directory.Exists(resourceDirectory) ? resourceDirectory : Path.Combine(live2dDirectory, "res");
 
-                if (!Directory.Exists(APP_LIB_PATH))
+                // APP_LIB_PATH = Path.Combine(live2dDirectory ?? string.Empty, APP_LIB_PATH);
+                Utils.SaveLastOpenedFile(pickedFile ?? string.Empty);
+
+                if (!Directory.Exists(resourceDirectory))
                 {
-                    AnsiConsole.MarkupLineInterpolated(
-                        $"No Live2D Cubism data found: {APP_LIB_PATH}"
+                    AnsiConsole.WriteException(new Exception(
+                        $"No Live2D Cubism data found in {resourceDirectory}!")
                     );
                     return;
                 }
 
-                Utils.SaveLastOpenedFile(filePicker.Path ?? string.Empty);
-
-                string originalRlmFile = Path.Combine(APP_LIB_PATH, RLM);
+                string originalRlmFile = Path.Combine(resourceDirectory, RLM);
                 string rlmFileBackup = $"{originalRlmFile}.bak";
                 string patchedRlmFile = Path.Combine(
                     execDirectory ?? string.Empty,
-                    MOD_LIB_PATH,
+                    "lib",
                     RLM
                 );
-                string live2dCoreFile = Path.Combine(APP_LIB_PATH, LIVE2D_CUBISM_MAIN);
+                string live2dMainFile = Path.Combine(resourceDirectory, LIVE2D_CUBISM_MAIN);
 
-                switch (choice)
+                switch (actionChoice)
                 {
                     case 0:
                         Patch(
-                            filePicker,
                             originalRlmFile,
                             patchedRlmFile,
                             rlmFileBackup,
-                            live2dCoreFile
+                            live2dMainFile
                         );
                         break;
                     case 1:
-                        Revoke(filePicker, live2dCoreFile, originalRlmFile, rlmFileBackup);
+                        Revoke(live2dMainFile, originalRlmFile, rlmFileBackup);
                         break;
+                    default:
+                        break;
+                }
+
+                if (args.Length > 0)
+                {
+                    Console.WriteLine();
+                    AnsiConsole.MarkupLine("Press any key to exit.");
+                    Console.ReadKey();
+                    return;
                 }
             }
         }
@@ -92,17 +124,16 @@ namespace Kiraio.LoveL2D
             AnsiConsole.MarkupLine("Selecting [bold orange1]Live2D Cubism Editor[/] executable...");
             var execDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             return Dialog.FileOpen(
-                "exe",
+                null,
                 Path.GetDirectoryName(Utils.GetLastOpenedFile()) ?? execDirectory
             );
         }
 
         static void Patch(
-            DialogResult filePicker,
             string rlmFile,
             string patchedRlmFile,
             string rlmFileBackup,
-            string live2dCoreFile
+            string live2dMainFile
         )
         {
             try
@@ -127,21 +158,20 @@ namespace Kiraio.LoveL2D
                 );
                 File.Copy(patchedRlmFile, rlmFile, true); // Copy patched rlm to the app/lib
 
-                PatchCubismCore(live2dCoreFile, originalRlmHash, patchedRlmHash);
+                PatchCubismCore(live2dMainFile, originalRlmHash, patchedRlmHash);
 
                 AnsiConsole.MarkupLine("Done. Enjoy UwU");
                 Console.WriteLine();
             }
             catch (Exception ex)
             {
-                AnsiConsole.MarkupLineInterpolated($"Failed to patch [red]{live2dCoreFile}[/]!");
+                AnsiConsole.MarkupLineInterpolated($"Failed to patch [red]{live2dMainFile}[/]!");
                 AnsiConsole.WriteException(ex);
             }
         }
 
         static void Revoke(
-            DialogResult filePicker,
-            string live2dCoreFile,
+            string live2dMainFile,
             string rlmFile,
             string rlmFileBackup
         )
@@ -163,11 +193,11 @@ namespace Kiraio.LoveL2D
                 }
 
                 AnsiConsole.MarkupLineInterpolated(
-                    $"Revoking license [green]{filePicker.Path}[/]..."
+                    $"Revoking license..."
                 );
 
                 PatchCubismCore(
-                    live2dCoreFile,
+                    live2dMainFile,
                     Utils.GetSHA256(rlmFile),
                     File.ReadAllText($"{rlmFile}.hash")
                 );
@@ -209,7 +239,7 @@ namespace Kiraio.LoveL2D
         static void PrintHelp()
         {
             string versionPath = Path.Combine(
-                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty,
                 "version.txt"
             );
             string version = File.Exists(versionPath) ? File.ReadAllText("version.txt") : "UNKNOWN";

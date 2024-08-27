@@ -20,9 +20,34 @@
 
 ## How To Use
 
-- Download LoveLive2D at [Releases](https://github.com/kiraio-moe/LoveLive2D/ "Releases") menu. Choose your platform and extract it.
-- Run `LoveLive2D.exe` (_Run as Administrator if necessary_) at the extracted archive.
+- Download LoveLive2D at [Releases](https://github.com/kiraio-moe/LoveLive2D/ "Releases") menu. Find your own platform then extract it.
+
+### Windows
+
+- Run `LoveLive2D.exe` (_**Run as Administrator if necessary**_) at the extracted archive.
 - Select `CubismEditor{version}.exe` in your Live2D Cubism installation folder, either you want to patch or revoke the license.
+- Alternatively, you can use Terminal. Replace `<action>` with `1` to **Patch** or `0` to **Revoke** license.
+
+  ```bash
+  LoveLive2D.exe <full_path_to_live2d_executable> <action>
+  ```
+
+### macOS
+
+- Whitelist/allow `LoveLive2D` in the Developer settings, so it can run.
+- Open a Terminal in the extracted folder.
+- Add Execute permission:
+
+  ```bash
+  chmod +x ./LoveLive2D
+  ```
+
+- _Because of a library LoveLive2D used isn't yet implement APIs for macOS, you need to run LoveLive2D using Terminal_. Run with **root** permission.  
+  Replace `<action>` with `1` to **Patch** or `0` to **Revoke** license:
+
+  ```bash
+  sudo ./LoveLive2D <full_path_to_live2d_executable.app> <action>
+  ```
 
 > [!NOTE]  
 > If Live2D Cubism Editor ask you about offline use expiration date (forcing you to do online authentication), just ignore it forever. The patch will always bypass the offline expiration date.

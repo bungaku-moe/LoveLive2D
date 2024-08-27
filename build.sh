@@ -62,6 +62,7 @@ do
         mkdir -p "${LIB_PATH}"
         cp "${OUTPUT_JAR}" "${LIB_PATH}"
         cp "version.txt" "bin/Release/${framework}/${os_arch}/publish"
+        chmod +x "bin/Release/${framework}/${os_arch}/publish/LoveLive2D"
     done
 
     for os_arch in "${TARGET_OS_ARCHITECTURES[@]}"
