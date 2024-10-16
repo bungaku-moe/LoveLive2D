@@ -20,7 +20,7 @@ namespace Kiraio.LoveL2D
             while (true)
             {
                 int actionChoice;
-                string pickedFile = "";
+                string pickedFile;
 
                 if (!(args.Length > 0))
                 {
@@ -34,23 +34,20 @@ namespace Kiraio.LoveL2D
                     if (actionChoice == actionList.Length - 1) // Exit
                         return;
 
-                    DialogResult filePicker = SelectFile();
-                    if (filePicker.IsCancelled)
-                    {
-                        AnsiConsole.MarkupLine("Cancelled.");
-                        continue;
-                    }
-                    if (filePicker.IsError)
-                    {
-                        AnsiConsole.WriteException(new Exception($"Something went wrong! Can\'t open File Picker."));
-                        continue;
-                    }
-                    pickedFile = filePicker.Path;
+                    pickedFile = OpenFileDialog();
+                    if (string.IsNullOrEmpty(pickedFile))
+                        return;
                 }
                 else
                 {
-                    Console.WriteLine(Directory.Exists(args[0]));
-                    pickedFile = Directory.Exists(args[0]) ? args[0] : pickedFile;
+                    pickedFile = Path.GetFullPath(args[0]);
+                    if (!File.Exists(pickedFile))
+                    {
+                        AnsiConsole.WriteException(new Exception(
+                            $"No Live2D Cubism Editor found in {pickedFile}!")
+                        );
+                        return;
+                    }
                     //! REVERSED! 1 = patch, 0 = revoke
                     actionChoice = int.Parse(args[1]) == 0 ? 1 : 0;
                 }
@@ -58,8 +55,8 @@ namespace Kiraio.LoveL2D
                 string execDirectory = Path.GetDirectoryName(
                     Assembly.GetExecutingAssembly().Location
                 ) ?? string.Empty;
-                string live2dDirectory = Path.GetDirectoryName(pickedFile) ?? string.Empty;
-                string resourceDirectory = Path.Combine(live2dDirectory, "app/lib");
+                string live2dDirectory = Path.GetDirectoryName(pickedFile);
+                string resourceDirectory = Path.Combine(live2dDirectory, "app/lib"); // WIN
                 resourceDirectory = Directory.Exists(resourceDirectory) ? resourceDirectory : Path.Combine(live2dDirectory, "res");
 
                 // APP_LIB_PATH = Path.Combine(live2dDirectory ?? string.Empty, APP_LIB_PATH);
@@ -119,14 +116,23 @@ namespace Kiraio.LoveL2D
             return Array.FindIndex(actionList, item => item == actionPrompt);
         }
 
-        static DialogResult SelectFile()
+        static string OpenFileDialog()
         {
             AnsiConsole.MarkupLine("Selecting [bold orange1]Live2D Cubism Editor[/] executable...");
-            var execDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            return Dialog.FileOpen(
-                null,
-                Path.GetDirectoryName(Utils.GetLastOpenedFile()) ?? execDirectory
-            );
+            string execDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            DialogResult filePicker = Dialog.FileOpen(null,
+                    Path.GetDirectoryName(Utils.GetLastOpenedFile() ?? execDirectory)
+                );
+
+            if (filePicker.IsCancelled)
+            {
+                AnsiConsole.MarkupLine("Cancelled.");
+                Console.Clear();
+            }
+            else if (filePicker.IsOk)
+                return filePicker.Path;
+
+            return string.Empty;
         }
 
         static void Patch(

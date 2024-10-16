@@ -8,7 +8,7 @@ echo "Building Love Live2D ${VERSION}..."
 # echo "Build process completed for all target OS architectures."
 # Define the target operating systems and architectures
 TARGET_OS_ARCHITECTURES=("win-x64" "win-arm64" "osx-x64" "osx-arm64" "linux-x64" "linux-arm64")
-TARGET_FRAMEWORKS=("net6.0" "net8.0")
+TARGET_FRAMEWORKS=("net8.0")
 
 # Build the project for each target OS architecture
 for os_arch in "${TARGET_OS_ARCHITECTURES[@]}"
